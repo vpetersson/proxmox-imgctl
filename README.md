@@ -34,17 +34,19 @@ and easy to swap if you ever want to make it run remotely.
 ### Option 1 — Prebuilt binary (recommended)
 
 A static `x86_64-linux-musl` binary is attached to every tagged release.
-On the Proxmox node:
+On the Proxmox node, as root:
 
 ```bash
-curl -fsSL -o /usr/local/bin/proxmox-imgctl \
-  https://github.com/vpetersson/proxmox-imgctl/releases/latest/download/proxmox-imgctl-x86_64-linux
-chmod +x /usr/local/bin/proxmox-imgctl
+# Download binary + checksum sidecar to the current directory
+curl -fsSLO https://github.com/vpetersson/proxmox-imgctl/releases/latest/download/proxmox-imgctl-x86_64-linux
+curl -fsSLO https://github.com/vpetersson/proxmox-imgctl/releases/latest/download/proxmox-imgctl-x86_64-linux.sha256
 
-# Optional — verify the checksum
-curl -fsSL -O \
-  https://github.com/vpetersson/proxmox-imgctl/releases/latest/download/proxmox-imgctl-x86_64-linux.sha256
+# Verify (the .sha256 file references the binary by its plain name, so both
+# must sit side-by-side when you run sha256sum -c)
 sha256sum -c proxmox-imgctl-x86_64-linux.sha256
+
+# Install
+install -m 0755 proxmox-imgctl-x86_64-linux /usr/local/bin/proxmox-imgctl
 ```
 
 The musl build has no glibc dependency, so the same binary runs on PVE 8 (Debian 12 / glibc 2.36) and PVE 9 (Debian 13 / glibc 2.41) without rebuild.
