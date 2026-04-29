@@ -23,8 +23,11 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
     let (template_id, _template_name) =
         templates[labels.iter().position(|x| x == &pick).unwrap()].clone();
 
+    // Use Proxmox's own next-id endpoint as the default. Falls back to
+    // template_id+1 only when pvesh isn't reachable.
+    let default_vmid = proxmox::next_free_vmid().unwrap_or((template_id + 1).max(100));
     let new_id: u32 = CustomType::new("New VMID:")
-        .with_default((template_id + 1).max(100))
+        .with_default(default_vmid)
         .prompt()?;
     if proxmox::vmid_exists(new_id)? {
         bail!("VMID {new_id} already exists.");

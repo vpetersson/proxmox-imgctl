@@ -3,6 +3,7 @@
 //! (`qm importdisk` in particular) don't have clean API equivalents.
 
 use anyhow::{anyhow, bail, Context, Result};
+use std::collections::HashSet;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -83,10 +84,9 @@ pub fn list_templates() -> Result<Vec<(u32, String)>> {
     parse_template_list(&out)
 }
 
-fn parse_template_list(json: &str) -> Result<Vec<(u32, String)>> {
-    // Hand-roll a tiny extractor to avoid pulling in serde_json: each entry
-    // is an object; we just look for "template":1 alongside vmid + name.
-    let mut out = Vec::new();
+/// Walk a JSON array/object, calling `f` for each top-level inner object.
+/// Hand-rolled to avoid pulling in serde_json for one trivial use case.
+fn for_each_object(json: &str, mut f: impl FnMut(&str)) {
     let bytes = json.as_bytes();
     let mut depth = 0i32;
     let mut start = 0usize;
@@ -101,22 +101,71 @@ fn parse_template_list(json: &str) -> Result<Vec<(u32, String)>> {
             b'}' => {
                 depth -= 1;
                 if depth == 0 {
-                    let obj = &json[start..=i];
-                    if extract_field(obj, "template").as_deref() == Some("1") {
-                        let vmid: u32 = extract_field(obj, "vmid")
-                            .ok_or_else(|| anyhow!("vmid missing"))?
-                            .parse()?;
-                        let name =
-                            extract_field(obj, "name").unwrap_or_else(|| format!("vm{vmid}"));
-                        out.push((vmid, name));
-                    }
+                    f(&json[start..=i]);
                 }
             }
             _ => {}
         }
     }
+}
+
+fn parse_template_list(json: &str) -> Result<Vec<(u32, String)>> {
+    let mut out = Vec::new();
+    for_each_object(json, |obj| {
+        if extract_field(obj, "template").as_deref() == Some("1") {
+            if let Some(vmid) = extract_field(obj, "vmid").and_then(|s| s.parse::<u32>().ok()) {
+                let name = extract_field(obj, "name").unwrap_or_else(|| format!("vm{vmid}"));
+                out.push((vmid, name));
+            }
+        }
+    });
     out.sort_by_key(|(id, _)| *id);
     Ok(out)
+}
+
+/// Every VMID present on the cluster (templates + running VMs + stopped VMs).
+fn list_all_vmids() -> Result<HashSet<u32>> {
+    let raw = run(&[
+        "pvesh",
+        "get",
+        "/cluster/resources",
+        "--type",
+        "vm",
+        "--output-format",
+        "json",
+    ])?;
+    let mut ids = HashSet::new();
+    for_each_object(&raw, |obj| {
+        if let Some(vmid) = extract_field(obj, "vmid").and_then(|s| s.parse::<u32>().ok()) {
+            ids.insert(vmid);
+        }
+    });
+    Ok(ids)
+}
+
+/// Next free VMID anywhere in the cluster, per Proxmox's own
+/// `/cluster/nextid` endpoint. Starts at 100 (lowest valid).
+pub fn next_free_vmid() -> Result<u32> {
+    let raw = run(&["pvesh", "get", "/cluster/nextid", "--output-format", "text"])?;
+    let s = raw.trim().trim_matches('"');
+    s.parse::<u32>()
+        .with_context(|| format!("parsing pvesh nextid output: {raw:?}"))
+}
+
+/// Lowest free VMID `>= start`, scanning the cluster's VM list. Falls back
+/// to the cluster-wide nextid if everything `>= start` is somehow taken.
+/// Used for templates, which conventionally live in the 9xxx range — there's
+/// no API hint for "next free template id," so we scan.
+pub fn next_free_vmid_from(start: u32) -> Result<u32> {
+    let used = list_all_vmids()?;
+    let mut candidate = start;
+    while used.contains(&candidate) {
+        match candidate.checked_add(1) {
+            Some(next) => candidate = next,
+            None => return next_free_vmid(),
+        }
+    }
+    Ok(candidate)
 }
 
 /// Crude JSON field reader: handles "key":"value" and "key":number.

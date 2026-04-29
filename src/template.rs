@@ -33,8 +33,12 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
         .with_default(&cfg.bridge)
         .prompt()?;
 
+    // Templates conventionally live in the 9xxx range. Pick the lowest free
+    // VMID >= 9000; fall back to a hardcoded 9000 only if pvesh is unreachable
+    // (e.g. running on a non-Proxmox box for dry-run testing).
+    let default_vmid = proxmox::next_free_vmid_from(9000).unwrap_or(9000);
     let vmid: u32 = CustomType::new("Template VMID:")
-        .with_default(9000u32)
+        .with_default(default_vmid)
         .with_error_message("Enter a valid VMID (positive integer)")
         .prompt()?;
     if proxmox::vmid_exists(vmid)? {
