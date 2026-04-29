@@ -15,7 +15,7 @@ and easy to swap if you ever want to make it run remotely.
 
 ## Features
 
-- Curated catalog of Ubuntu (24.04, 22.04) and Debian (13, 12, 11) cloud images, checksum-verified against the upstream `SHA256SUMS` / `SHA512SUMS`.
+- Curated catalog of Ubuntu (26.04, 24.04, 22.04) and Debian (13, 12, 11) cloud images, checksum-verified against the upstream `SHA256SUMS` / `SHA512SUMS`.
 - Built-in cloud-init profiles (`minimal`, `dev`, `docker`) plus an interactive generator and "load existing snippet" option.
 - Auto-picks the next free VMID from `pvesh /cluster/nextid` (templates default to the lowest free VMID >= 9000).
 - `--dry-run` mode prints every command, snippet, and download that would be performed without executing or writing anything.
@@ -203,6 +203,7 @@ previewing from a non-root account or even off the Proxmox node.
 
 | Distro | Release | Codename | Format |
 |---|---|---|---|
+| Ubuntu | 26.04 LTS | resolute | `.img` (qcow2) |
 | Ubuntu | 24.04 LTS | noble | `.img` (qcow2) |
 | Ubuntu | 22.04 LTS | jammy | `.img` (qcow2) |
 | Debian | 13 | trixie | `.qcow2` |
