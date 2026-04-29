@@ -1,0 +1,21 @@
+[package]
+name = "proxmox-imgctl"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive cloud-image template + VM bootstrapper for Proxmox"
+license = "MIT"
+
+[dependencies]
+inquire = "0.7"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+sha2 = "0.10"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+anyhow = "1"
+indicatif = "0.17"
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
