@@ -49,6 +49,17 @@ impl Image {
 pub static CATALOG: &[Image] = &[
     Image {
         distro: "Ubuntu",
+        release: "26.04",
+        codename: "resolute",
+        image_url:
+            "https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64.img",
+        sums_url: "https://cloud-images.ubuntu.com/resolute/current/SHA256SUMS",
+        sums_algo: HashAlgo::Sha256,
+        sums_filename: "resolute-server-cloudimg-amd64.img",
+        ostype: "l26",
+    },
+    Image {
+        distro: "Ubuntu",
         release: "24.04",
         codename: "noble",
         image_url: "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
