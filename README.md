@@ -112,8 +112,9 @@ $ sudo proxmox-imgctl
 ? Network bridge: vmbr0
 ? Template VMID: 9000
 ? Template name: ubuntu-noble-template
-? Memory (MB): 1024
-? CPU cores: 1
+? Memory (e.g. 1024M, 2G): 1G
+? CPU sockets: 1
+? Cores per socket: 1
 
 Plan:
   base image:  https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img -> /var/lib/proxmox-imgctl/cache/ubuntu-24.04-noble.img
@@ -121,7 +122,7 @@ Plan:
   name:        ubuntu-noble-template
   storage:     local-lvm
   bridge:      vmbr0
-  resources:   1 core(s), 1024 MB
+  resources:   1 socket(s) × 1 core(s) = 1 vCPU, 1G memory
 
 ? Proceed? Yes
 -> Creating VM shell...
@@ -140,9 +141,10 @@ $ sudo proxmox-imgctl
 ? New VMID: 101
 ? VM name: web-01
 ? Storage pool:  local-lvm
-? CPU cores: 2
-? Memory (MB): 2048
-? Disk size (GB): 32
+? CPU sockets: 1
+? Cores per socket: 2
+? Memory (e.g. 2048M, 2G): 2G
+? Disk size (e.g. 32G, 1T): 32G
 ? Cloud-init profile:  [builtin] dev — user + git, build-essential, curl, vim, htop, tmux, jq
 ? Primary username: admin
 ? ssh_import_id (e.g. gh:octocat, blank to skip): gh:octocat
@@ -154,14 +156,14 @@ Wrote /var/lib/vz/snippets/dev.yaml
 Plan:
   clone:       template 9000 -> vmid 101 (web-01)
   storage:     local-lvm
-  resources:   2 core(s), 2048 MB, 32 GB disk
+  resources:   1 socket(s) × 2 core(s) = 2 vCPU, 2G memory, 32G disk
   cloud-init:  local:snippets/dev.yaml
   start:       true
 
 ? Proceed? Yes
 -> Cloning template (full clone, can take a minute)...
 -> Applying VM settings + cloud-init snippet...
--> Resizing disk to 32 GB...
+-> Resizing disk to 32G...
 -> Starting VM...
 
 ✓ VM 101 (web-01) ready.

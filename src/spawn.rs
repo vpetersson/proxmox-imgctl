@@ -5,6 +5,7 @@ use std::path::Path;
 use crate::config::Config;
 use crate::profiles;
 use crate::proxmox;
+use crate::size::SizeMb;
 
 pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
     println!();
@@ -46,12 +47,19 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
             .prompt()?
     };
 
-    let cores: u32 = CustomType::new("CPU cores:").with_default(2u32).prompt()?;
-    let memory: u32 = CustomType::new("Memory (MB):")
-        .with_default(2048u32)
+    let sockets: u32 = CustomType::new("CPU sockets:")
+        .with_default(1u32)
         .prompt()?;
-    let disk_gb: u32 = CustomType::new("Disk size (GB):")
-        .with_default(32u32)
+    let cores: u32 = CustomType::new("Cores per socket:")
+        .with_default(2u32)
+        .prompt()?;
+    let memory = CustomType::<SizeMb>::new("Memory (e.g. 2048M, 2G):")
+        .with_default(SizeMb(2048))
+        .with_help_message("Suffix with M, G, or T; bare number = MB")
+        .prompt()?;
+    let disk = CustomType::<SizeMb>::new("Disk size (e.g. 32G, 1T):")
+        .with_default(SizeMb(32 * 1024))
+        .with_help_message("Suffix with M, G, or T; bare number = MB")
         .prompt()?;
 
     let snippet_dir = Path::new(&cfg.snippet_dir);
@@ -70,7 +78,10 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
     println!("Plan:");
     println!("  clone:       template {template_id} → vmid {new_id} ({name})");
     println!("  storage:     {storage}");
-    println!("  resources:   {cores} core(s), {memory} MB, {disk_gb} GB disk");
+    let total_vcpus = sockets * cores;
+    println!(
+        "  resources:   {sockets} socket(s) × {cores} core(s) = {total_vcpus} vCPU, {memory} memory, {disk} disk"
+    );
     println!(
         "  cloud-init:  {}:snippets/{}",
         cfg.snippet_storage, snippet_filename
@@ -88,15 +99,16 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
     println!("→ Applying VM settings + cloud-init snippet...");
     proxmox::apply_clone_settings(
         new_id,
+        sockets,
         cores,
-        memory,
+        memory.mb(),
         &cfg.snippet_storage,
         &snippet_filename,
         dry_run,
     )?;
 
-    println!("→ Resizing disk to {disk_gb} GB...");
-    proxmox::resize_disk(new_id, disk_gb, dry_run)?;
+    println!("→ Resizing disk to {disk}...");
+    proxmox::resize_disk(new_id, disk.mb(), dry_run)?;
 
     if start_after {
         println!("→ Starting VM...");
