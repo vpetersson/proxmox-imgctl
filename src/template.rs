@@ -57,7 +57,7 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
 
     let memory = CustomType::<SizeMb>::new("Memory (e.g. 1024M, 2G):")
         .with_default(SizeMb(1024))
-        .with_help_message("Suffix with M, G, or T; bare number = MB")
+        .with_help_message("Suffix with M, G, or T; bare number = MB; must convert exactly")
         .prompt()?;
     let sockets: u32 = CustomType::new("CPU sockets:")
         .with_default(1u32)

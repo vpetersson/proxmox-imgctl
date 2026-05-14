@@ -56,7 +56,15 @@ impl FromStr for SizeMb {
         if mb_exact > u32::MAX as f64 {
             return Err("size too large".into());
         }
-        Ok(SizeMb(mb_exact.round() as u32))
+        // Reject inputs that don't convert to a whole number of MB (e.g.
+        // `1.4G` = 1433.6 MB). Fractions that land exactly on an MB
+        // boundary like `1.5G` = 1536 MB still go through.
+        if mb_exact.fract() != 0.0 {
+            return Err(format!(
+                "{s:?} isn't a whole number of MB ({mb_exact} MB) — pick a value that converts exactly"
+            ));
+        }
+        Ok(SizeMb(mb_exact as u32))
     }
 }
 
@@ -121,6 +129,15 @@ mod tests {
         // 0.5M is below the minimum; it must not silently round up to 1M.
         assert!("0.5M".parse::<SizeMb>().is_err());
         assert!("0.4M".parse::<SizeMb>().is_err());
+    }
+
+    #[test]
+    fn rejects_non_integral_mb() {
+        // `1.4G` is 1433.6 MB — no whole-MB representation; reject rather
+        // than silently rounding.
+        assert!("1.4G".parse::<SizeMb>().is_err());
+        assert!("1.5M".parse::<SizeMb>().is_err());
+        assert!("2.7G".parse::<SizeMb>().is_err());
     }
 
     #[test]

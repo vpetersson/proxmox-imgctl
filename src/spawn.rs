@@ -57,11 +57,11 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
         .prompt()?;
     let memory = CustomType::<SizeMb>::new("Memory (e.g. 2048M, 2G):")
         .with_default(SizeMb(2048))
-        .with_help_message("Suffix with M, G, or T; bare number = MB")
+        .with_help_message("Suffix with M, G, or T; bare number = MB; must convert exactly")
         .prompt()?;
     let disk = CustomType::<SizeMb>::new("Disk size (e.g. 32G, 1T):")
         .with_default(SizeMb(32 * 1024))
-        .with_help_message("Suffix with M, G, or T; bare number = MB")
+        .with_help_message("Suffix with M, G, or T; bare number = MB; must convert exactly")
         .prompt()?;
 
     let snippet_dir = Path::new(&cfg.snippet_dir);
