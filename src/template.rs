@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::catalog::CATALOG;
 use crate::config::Config;
 use crate::download;
-use crate::proxmox;
+use crate::proxmox::{self, cores_validator, sockets_validator};
 use crate::size::SizeMb;
 
 pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
@@ -61,9 +61,11 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
         .prompt()?;
     let sockets: u32 = CustomType::new("CPU sockets:")
         .with_default(1u32)
+        .with_validator(sockets_validator)
         .prompt()?;
     let cores: u32 = CustomType::new("Cores per socket:")
         .with_default(1u32)
+        .with_validator(cores_validator)
         .prompt()?;
 
     println!();

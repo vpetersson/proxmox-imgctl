@@ -47,14 +47,16 @@ impl FromStr for SizeMb {
             }
         };
 
-        let mb = (n * mult_mb).round();
-        if mb < 1.0 {
+        // Check the exact value before rounding so sub-MB inputs like `0.5M`
+        // don't round up past the minimum.
+        let mb_exact = n * mult_mb;
+        if mb_exact < 1.0 {
             return Err("size must be at least 1 MB".into());
         }
-        if mb > u32::MAX as f64 {
+        if mb_exact > u32::MAX as f64 {
             return Err("size too large".into());
         }
-        Ok(SizeMb(mb as u32))
+        Ok(SizeMb(mb_exact.round() as u32))
     }
 }
 
@@ -112,6 +114,13 @@ mod tests {
         assert!("-1G".parse::<SizeMb>().is_err());
         assert!("1X".parse::<SizeMb>().is_err());
         assert!("0M".parse::<SizeMb>().is_err());
+    }
+
+    #[test]
+    fn rejects_sub_mb_even_when_rounding_would_lift_it() {
+        // 0.5M is below the minimum; it must not silently round up to 1M.
+        assert!("0.5M".parse::<SizeMb>().is_err());
+        assert!("0.4M".parse::<SizeMb>().is_err());
     }
 
     #[test]
