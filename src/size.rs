@@ -24,9 +24,7 @@ impl FromStr for SizeMb {
             return Err("size cannot be empty".into());
         }
 
-        let split = s
-            .find(|c: char| c.is_ascii_alphabetic())
-            .unwrap_or(s.len());
+        let split = s.find(|c: char| c.is_ascii_alphabetic()).unwrap_or(s.len());
         let (num_part, suffix) = s.split_at(split);
         let num_part = num_part.trim();
         let suffix = suffix.trim().to_ascii_uppercase();
