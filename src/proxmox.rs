@@ -3,9 +3,35 @@
 //! (`qm importdisk` in particular) don't have clean API equivalents.
 
 use anyhow::{anyhow, bail, Context, Result};
+use inquire::validator::Validation;
+use inquire::CustomUserError;
 use std::collections::HashSet;
 use std::path::Path;
 use std::process::{Command, Stdio};
+
+/// Proxmox `qm` accepts sockets in 1..=4. Reject anything outside that range
+/// at the prompt so 0 (which would also make `sockets * cores` zero) and
+/// out-of-range values surface before we shell out.
+pub fn sockets_validator(n: &u32) -> Result<Validation, CustomUserError> {
+    if (1..=4).contains(n) {
+        Ok(Validation::Valid)
+    } else {
+        Ok(Validation::Invalid(
+            "sockets must be between 1 and 4 (Proxmox limit)".into(),
+        ))
+    }
+}
+
+/// Proxmox `qm` accepts cores per socket in 1..=128.
+pub fn cores_validator(n: &u32) -> Result<Validation, CustomUserError> {
+    if (1..=128).contains(n) {
+        Ok(Validation::Valid)
+    } else {
+        Ok(Validation::Invalid(
+            "cores per socket must be between 1 and 128".into(),
+        ))
+    }
+}
 
 fn run(args: &[&str]) -> Result<String> {
     let out = Command::new(args[0])
@@ -204,6 +230,7 @@ pub fn create_vm_shell(
     storage: &str,
     bridge: &str,
     memory_mb: u32,
+    sockets: u32,
     cores: u32,
     ostype: &str,
     dry_run: bool,
@@ -226,7 +253,7 @@ pub fn create_vm_shell(
             "--cores",
             &cores.to_string(),
             "--sockets",
-            "1",
+            &sockets.to_string(),
             "--memory",
             &memory_mb.to_string(),
             "--net0",
@@ -340,6 +367,7 @@ pub fn clone_template(
 
 pub fn apply_clone_settings(
     vmid: u32,
+    sockets: u32,
     cores: u32,
     memory_mb: u32,
     snippet_storage: &str,
@@ -351,6 +379,8 @@ pub fn apply_clone_settings(
             "qm",
             "set",
             &vmid.to_string(),
+            "--sockets",
+            &sockets.to_string(),
             "--cores",
             &cores.to_string(),
             "--memory",
@@ -366,14 +396,14 @@ pub fn apply_clone_settings(
     )
 }
 
-pub fn resize_disk(vmid: u32, gb: u32, dry_run: bool) -> Result<()> {
+pub fn resize_disk(vmid: u32, mb: u32, dry_run: bool) -> Result<()> {
     run_mut(
         &[
             "qm",
             "resize",
             &vmid.to_string(),
             "virtio0",
-            &format!("{gb}G"),
+            &format!("{mb}M"),
         ],
         dry_run,
     )

@@ -5,7 +5,8 @@ use std::path::Path;
 use crate::catalog::CATALOG;
 use crate::config::Config;
 use crate::download;
-use crate::proxmox;
+use crate::proxmox::{self, cores_validator, sockets_validator};
+use crate::size::SizeMb;
 
 pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
     println!();
@@ -54,10 +55,18 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
         .with_default(&default_name)
         .prompt()?;
 
-    let memory: u32 = CustomType::new("Memory (MB):")
-        .with_default(1024u32)
+    let memory = CustomType::<SizeMb>::new("Memory (e.g. 1024M, 2G):")
+        .with_default(SizeMb(1024))
+        .with_help_message("Suffix with M, G, or T; bare number = MB; must convert exactly")
         .prompt()?;
-    let cores: u32 = CustomType::new("CPU cores:").with_default(1u32).prompt()?;
+    let sockets: u32 = CustomType::new("CPU sockets:")
+        .with_default(1u32)
+        .with_validator(sockets_validator)
+        .prompt()?;
+    let cores: u32 = CustomType::new("Cores per socket:")
+        .with_default(1u32)
+        .with_validator(cores_validator)
+        .prompt()?;
 
     println!();
     println!("Plan:");
@@ -66,7 +75,10 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
     println!("  name:        {name}");
     println!("  storage:     {storage}");
     println!("  bridge:      {bridge}");
-    println!("  resources:   {cores} core(s), {memory} MB");
+    let total_vcpus = sockets * cores;
+    println!(
+        "  resources:   {sockets} socket(s) × {cores} core(s) = {total_vcpus} vCPU, {memory} memory"
+    );
     println!();
     if !Confirm::new("Proceed?").with_default(true).prompt()? {
         println!("Aborted.");
@@ -79,7 +91,8 @@ pub fn run(cfg: &Config, dry_run: bool) -> Result<()> {
         &name,
         &storage,
         &bridge,
-        memory,
+        memory.mb(),
+        sockets,
         cores,
         image.ostype,
         dry_run,

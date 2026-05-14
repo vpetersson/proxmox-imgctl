@@ -6,6 +6,7 @@ mod config;
 mod download;
 mod profiles;
 mod proxmox;
+mod size;
 mod spawn;
 mod template;
 
